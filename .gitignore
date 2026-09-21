@@ -2,7 +2,7 @@
 node_modules/
 .pnp
 .pnp.js
-
+node_modules dist .env 
 # Production build
 dist/
 dist-ssr/
@@ -29,3 +29,4 @@ pnpm-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
