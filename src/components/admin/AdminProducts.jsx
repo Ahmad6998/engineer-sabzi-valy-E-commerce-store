@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
-import { Search, Plus, Trash2, Edit2, Check, X, Star, ArrowUpDown, RotateCcw, Image, Tag, Camera, Upload, UploadCloud } from 'lucide-react';
+import { Search, Plus, Trash2, Edit2, Check, X, Star, ArrowUpDown, RotateCcw, Image, Tag, Camera, Upload, UploadCloud, Sparkles, Info } from 'lucide-react';
 import { CATEGORIES } from '../../data/products';
 
 // Image compression helper for clean, fast base64 storage
@@ -47,6 +47,11 @@ export default function AdminProducts() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingPriceId, setEditingPriceId] = useState(null);
   const [tempPrice, setTempPrice] = useState('');
+
+  // Full product edit modal state & save notifications
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [saveToast, setSaveToast] = useState(null); // { message: string, type: string }
+  const [showSaveInstructions, setShowSaveInstructions] = useState(true);
 
   // Picture upload modal state
   const [photoModalProduct, setPhotoModalProduct] = useState(null);
@@ -132,6 +137,14 @@ export default function AdminProducts() {
 
     updateProduct(productId, updates);
     setEditingBadgeId(null);
+    triggerSaveToast(`✓ Badge updated & saved for this product.`);
+  };
+
+  const triggerSaveToast = (message, type = 'success') => {
+    setSaveToast({ message, type });
+    setTimeout(() => {
+      setSaveToast(null);
+    }, 4500);
   };
 
   // 1. Open photo upload modal for an existing product
@@ -167,6 +180,7 @@ export default function AdminProducts() {
         ? customPhotoUrl.trim() || photoModalProduct.image
         : tempPhotoPreview || photoModalProduct.image;
     updateProduct(photoModalProduct.id, { image: finalImage });
+    triggerSaveToast(`✓ Picture updated & saved for "${photoModalProduct.name}".`);
     setPhotoModalProduct(null);
   };
 
@@ -180,6 +194,61 @@ export default function AdminProducts() {
     } catch (err) {
       alert('Could not process image file. Please try another image.');
     }
+  };
+
+  // 5. Full Product Edit Handlers
+  const handleStartEditProduct = (product) => {
+    setEditingProduct({
+      ...product,
+      originalPrice: product.originalPrice || '',
+      description: product.description || '',
+      nutrition: product.nutrition || '',
+      badge: product.badge || 'Mandi Direct',
+      baseUnit: product.baseUnit || '1 kg',
+      mandiGrade: product.mandiGrade || 'Grade A+ Farm Fresh'
+    });
+  };
+
+  const handleEditProductFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressImageFile(file);
+      setEditingProduct(prev => ({ ...prev, image: compressed }));
+    } catch (err) {
+      alert('Could not process image file. Please try another image.');
+    }
+  };
+
+  const handleSaveEditedProduct = (e) => {
+    e.preventDefault();
+    if (!editingProduct) return;
+
+    const basePriceNum = parseInt(editingProduct.basePrice, 10) || 0;
+    const originalPriceNum = editingProduct.originalPrice ? parseInt(editingProduct.originalPrice, 10) : null;
+    const finalName = editingProduct.name.trim();
+
+    const updatedData = {
+      name: finalName,
+      urduName: editingProduct.urduName?.trim() || '',
+      category: editingProduct.category,
+      basePrice: basePriceNum,
+      originalPrice: originalPriceNum,
+      baseUnit: editingProduct.baseUnit.trim() || '1 kg',
+      mandiGrade: editingProduct.mandiGrade.trim() || 'Grade A+ Farm Fresh',
+      badge: editingProduct.badge?.trim() || null,
+      image: editingProduct.image,
+      description: editingProduct.description?.trim() || '',
+      nutrition: editingProduct.nutrition?.trim() || '',
+      inStock: editingProduct.inStock ?? true,
+      weightOptions: editingProduct.weightOptions?.length ? editingProduct.weightOptions : [
+        { label: editingProduct.baseUnit || '1 kg', multiplier: 1, isDefault: true }
+      ]
+    };
+
+    updateProduct(editingProduct.id, updatedData);
+    setEditingProduct(null);
+    triggerSaveToast(`✓ "${finalName}" saved successfully! Live store updated.`);
   };
 
   const filteredProducts = products.filter(p => {
@@ -204,6 +273,7 @@ export default function AdminProducts() {
     const parsed = parseInt(tempPrice, 10);
     if (!isNaN(parsed) && parsed > 0) {
       updateProduct(productId, { basePrice: parsed });
+      triggerSaveToast(`✓ Price updated to Rs. ${parsed} and saved.`);
     }
     setEditingPriceId(null);
   };
@@ -212,12 +282,15 @@ export default function AdminProducts() {
     e.preventDefault();
     if (!newProduct.name || !newProduct.basePrice) return;
 
+    const createdName = newProduct.name.trim();
+
     addProduct({
       ...newProduct,
+      name: createdName,
       basePrice: parseInt(newProduct.basePrice, 10),
       originalPrice: newProduct.originalPrice ? parseInt(newProduct.originalPrice, 10) : null,
       weightOptions: [
-        { label: newProduct.baseUnit, multiplier: 1, isDefault: true },
+        { label: newProduct.baseUnit || '1 kg', multiplier: 1, isDefault: true },
         { label: '2 kg', multiplier: 1.9 }
       ]
     });
@@ -236,10 +309,22 @@ export default function AdminProducts() {
       description: '',
       nutrition: ''
     });
+
+    triggerSaveToast(`✓ "${createdName}" published & saved! Now available to customers.`);
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 relative">
+
+      {/* Floating Save Confirmation Toast */}
+      {saveToast && (
+        <div className="fixed top-5 right-5 z-50 animate-bounce">
+          <div className="flex items-center gap-2 bg-emerald-700 text-white px-4 py-3 rounded-2xl shadow-2xl border border-emerald-500 text-xs font-bold">
+            <Check className="w-4 h-4 text-emerald-300" />
+            <span>{saveToast.message}</span>
+          </div>
+        </div>
+      )}
       
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -248,14 +333,14 @@ export default function AdminProducts() {
             Produce & Inventory Manager
           </h1>
           <p className="text-xs text-gray-500">
-            {products.length} total items in catalog • Edit prices, toggle stock, and publish new harvest
+            {products.length} total items in catalog • Edit all details, toggle stock, and publish new harvest
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer active:scale-95"
           >
             <Plus className="w-4 h-4" />
             <span>Add New Item</span>
@@ -264,6 +349,7 @@ export default function AdminProducts() {
             onClick={() => {
               if (window.confirm('Reset all products to initial catalog?')) {
                 resetProductsToDefault();
+                triggerSaveToast('Catalog reset to default template.');
               }
             }}
             className="p-2 bg-white hover:bg-gray-100 text-gray-500 border border-gray-200 rounded-xl transition-colors cursor-pointer"
@@ -272,6 +358,59 @@ export default function AdminProducts() {
             <RotateCcw className="w-4 h-4" />
           </button>
         </div>
+      </div>
+
+      {/* Save Instructions & Guide Banner */}
+      <div className="bg-gradient-to-r from-brand-900 via-slate-900 to-emerald-950 text-white p-4 sm:p-5 rounded-2xl shadow-md border border-brand-800/80">
+        <div className="flex items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-brand-500/20 text-brand-400 border border-brand-500/30 flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4 text-accent-amber" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <span>Product Add & Edit — Save Instructions (پروڈکٹس محفوظ کرنے کی ہدایات)</span>
+                <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">
+                  Auto-Save Active
+                </span>
+              </h3>
+              <p className="text-xs text-slate-300 mt-0.5">
+                All changes, prices, and additions are saved automatically in real-time and go live on the customer store instantly.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowSaveInstructions(!showSaveInstructions)}
+            className="text-xs text-brand-300 hover:text-white underline underline-offset-2 shrink-0 font-bold cursor-pointer"
+          >
+            {showSaveInstructions ? 'Hide Guide ▲' : 'View Instructions ▼'}
+          </button>
+        </div>
+
+        {showSaveInstructions && (
+          <div className="mt-4 pt-4 border-t border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+            <div className="p-3 bg-slate-800/80 rounded-xl border border-slate-700">
+              <span className="font-bold text-brand-400 block mb-1">1. Add New Produce</span>
+              <p className="text-slate-300 leading-relaxed text-[11px]">
+                Click <strong>"+ Add New Item"</strong> at the top. Enter English & Urdu names, selling price, unit, upload a picture from your device, and click <strong>"Publish to Catalog"</strong>. It saves immediately!
+              </p>
+            </div>
+            <div className="p-3 bg-slate-800/80 rounded-xl border border-slate-700">
+              <span className="font-bold text-brand-400 block mb-1">2. Edit Any Product</span>
+              <p className="text-slate-300 leading-relaxed text-[11px]">
+                Click the <strong>"✏️ Edit"</strong> button on any item to update its title, category, price, discount badge, or storage instructions. Click <strong>"Save Changes"</strong> to update instantly.
+              </p>
+            </div>
+            <div className="p-3 bg-slate-800/80 rounded-xl border border-slate-700">
+              <span className="font-bold text-brand-400 block mb-1">3. Live Persistence</span>
+              <p className="text-slate-300 leading-relaxed text-[11px]">
+                Every edit is stored permanently in browser storage (`localStorage`). Customers visiting your store see the updated produce and rates without restarting the app.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Filter and Search Bar */}
@@ -320,7 +459,7 @@ export default function AdminProducts() {
                 <th className="py-3 px-4">Selling Price (PKR)</th>
                 <th className="py-3 px-4">Badge</th>
                 <th className="py-3 px-4">Stock Status</th>
-                <th className="py-3 px-4 text-right">Delete</th>
+                <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 font-medium text-gray-700">
@@ -351,9 +490,14 @@ export default function AdminProducts() {
 
                         <div>
                           <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-gray-900 text-xs block">
+                            <button
+                              type="button"
+                              onClick={() => handleStartEditProduct(p)}
+                              className="font-bold text-gray-900 text-xs text-left hover:text-brand-600 hover:underline transition-colors cursor-pointer"
+                              title="Click to edit all product details"
+                            >
                               {p.name}
-                            </span>
+                            </button>
                             <button
                               type="button"
                               onClick={() => handleOpenPhotoModal(p)}
@@ -598,17 +742,30 @@ export default function AdminProducts() {
 
                     {/* Actions */}
                     <td className="py-3 px-4 text-right">
-                      <button
-                        onClick={() => {
-                          if (window.confirm(`Delete ${p.name}?`)) {
-                            deleteProduct(p.id);
-                          }
-                        }}
-                        className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
-                        title="Delete product"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleStartEditProduct(p)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 bg-brand-50 hover:bg-brand-100 text-brand-700 hover:text-brand-900 border border-brand-200 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-2xs"
+                          title={`Edit all details of ${p.name}`}
+                        >
+                          <Edit2 className="w-3 h-3 text-brand-600" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm(`Delete ${p.name}? This will remove it from the store.`)) {
+                              deleteProduct(p.id);
+                              triggerSaveToast(`🗑️ "${p.name}" deleted from store.`);
+                            }
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-red-600 rounded-xl hover:bg-red-50 transition-colors cursor-pointer"
+                          title="Delete product"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
 
                   </tr>
@@ -635,6 +792,14 @@ export default function AdminProducts() {
             </div>
 
             <form onSubmit={handleCreateProduct} className="p-5 overflow-y-auto space-y-4 text-xs">
+              
+              {/* Save Instruction Notice */}
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-900 text-xs flex items-center gap-2.5">
+                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  <strong>Save Instruction:</strong> Clicking <strong>"Publish to Catalog"</strong> will instantly save this produce item to your store database and make it live for customers immediately.
+                </span>
+              </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -764,7 +929,7 @@ export default function AdminProducts() {
 
               <div>
                 <label className="text-xs font-bold text-gray-700 block mb-1">
-                  Description & Origin
+                  Description & Storage / Cooking Instructions
                 </label>
                 <textarea
                   rows="2"
@@ -780,7 +945,264 @@ export default function AdminProducts() {
                   type="submit"
                   className="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-xs shadow-md transition-all cursor-pointer"
                 >
-                  Publish to Catalog
+                  Publish to Catalog & Save
+                </button>
+              </div>
+
+            </form>
+
+          </div>
+        </div>
+      )}
+
+      {/* Edit Product Modal */}
+      {editingProduct && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
+          <div className="bg-white w-full max-w-xl rounded-3xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col max-h-[90vh]">
+            
+            {/* Modal Header */}
+            <div className="p-5 bg-gradient-to-r from-slate-900 via-brand-950 to-emerald-950 text-white flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-brand-300 uppercase tracking-wider">
+                  Edit Produce Item
+                </span>
+                <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                  <span>{editingProduct.name}</span>
+                  {editingProduct.urduName && (
+                    <span className="font-urdu text-brand-300 text-sm">({editingProduct.urduName})</span>
+                  )}
+                </h3>
+              </div>
+              <button
+                onClick={() => setEditingProduct(null)}
+                className="p-1.5 rounded-full hover:bg-white/20 text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleSaveEditedProduct} className="p-5 overflow-y-auto space-y-4 text-xs">
+              
+              {/* Save Instruction Notice */}
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-900 text-xs flex items-center gap-2.5">
+                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  <strong>Save Instruction:</strong> Any changes made here will save instantly upon clicking <strong>"Save Changes & Update Store"</strong> and go live immediately.
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-gray-700 block mb-1">
+                    English Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editingProduct.name}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 font-bold text-gray-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-gray-700 block mb-1">
+                    Urdu Name (نام اردو میں)
+                  </label>
+                  <input
+                    type="text"
+                    value={editingProduct.urduName}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, urduName: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-right font-urdu font-bold text-brand-800"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-gray-700 block mb-1">
+                    Category *
+                  </label>
+                  <select
+                    value={editingProduct.category}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 font-semibold text-gray-800"
+                  >
+                    <option value="vegetables">Fresh Vegetables</option>
+                    <option value="greens">Leafy Greens & Herbs</option>
+                    <option value="fruits">Seasonal Fruits</option>
+                    <option value="aromatics">Aromatics & Masalay</option>
+                    <option value="bundles">Bachat Bundles</option>
+                    <option value="dryfruits">Dry Fruits & Honey</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-gray-700 block mb-1">
+                    Selling Price (PKR) *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    value={editingProduct.basePrice}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, basePrice: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 font-black text-brand-700 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-gray-700 block mb-1">
+                    Original Price (Cut Rate)
+                  </label>
+                  <input
+                    type="number"
+                    value={editingProduct.originalPrice}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, originalPrice: e.target.value })}
+                    placeholder="e.g. 190"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-gray-700 block mb-1">
+                    Base Unit *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editingProduct.baseUnit}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, baseUnit: e.target.value })}
+                    placeholder="e.g. 1 kg, 500 g, 1 dozen"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-gray-700 block mb-1">
+                    Mandi Grade
+                  </label>
+                  <input
+                    type="text"
+                    value={editingProduct.mandiGrade}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, mandiGrade: e.target.value })}
+                    placeholder="e.g. Grade A+ Farm Fresh"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-gray-700 block mb-1">
+                    Badge / Tag
+                  </label>
+                  <input
+                    type="text"
+                    value={editingProduct.badge || ''}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, badge: e.target.value })}
+                    placeholder="e.g. Save 20%, Mandi Direct"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 font-bold"
+                  />
+                </div>
+              </div>
+
+              {/* Picture Upload / URL */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-gray-700 block">
+                    Produce Picture
+                  </label>
+                  <span className="text-[10px] text-gray-400">
+                    Upload from device or paste link
+                  </span>
+                </div>
+
+                <div className="flex gap-3 items-center">
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 border border-gray-200 shrink-0 shadow-xs">
+                    {editingProduct.image ? (
+                      <img
+                        src={editingProduct.image}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400 text-[10px]">
+                        No image
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1 space-y-1.5">
+                    <label className="flex items-center justify-center gap-2 px-3 py-2 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95">
+                      <UploadCloud className="w-4 h-4 text-brand-600" />
+                      <span>Upload New Picture from Device</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleEditProductFileChange}
+                        className="hidden"
+                      />
+                    </label>
+                    <input
+                      type="url"
+                      value={editingProduct.image}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, image: e.target.value })}
+                      placeholder="Or paste image URL (https://...)"
+                      className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-[11px] focus:outline-none focus:ring-1 focus:ring-brand-500 bg-gray-50"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Description & Preparation / Storage Instructions */}
+              <div>
+                <label className="text-xs font-bold text-gray-700 block mb-1">
+                  Description & Storage / Cooking Instructions
+                </label>
+                <textarea
+                  rows="2"
+                  value={editingProduct.description}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
+                  placeholder="Special instructions, storage tips, or harvest details..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </div>
+
+              {/* Stock Status Toggle */}
+              <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-xl">
+                <div>
+                  <span className="font-bold text-gray-800 block text-xs">Availability Status</span>
+                  <span className="text-[11px] text-gray-500">Customers can order when in stock</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingProduct({ ...editingProduct, inStock: !editingProduct.inStock })}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    editingProduct.inStock
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-red-500 text-white shadow-xs'
+                  }`}
+                >
+                  {editingProduct.inStock ? '✓ Available (In Stock)' : '✕ Out of Stock'}
+                </button>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingProduct(null)}
+                  className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-500 hover:to-brand-600 text-white rounded-xl font-bold text-xs shadow-md shadow-brand-600/30 transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Save Changes & Update Store</span>
                 </button>
               </div>
 
