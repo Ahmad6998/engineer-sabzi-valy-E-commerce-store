@@ -39,6 +39,27 @@ const compressImageFile = (file, maxWidth = 600, quality = 0.85) => {
   });
 };
 
+// Upload image to server endpoint so it gets a public URL viewable by all devices
+const uploadImageToServer = async (base64Data, produceName) => {
+  if (!base64Data || !base64Data.startsWith('data:image/')) {
+    return base64Data;
+  }
+  try {
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64Data, name: produceName })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.url) return data.url;
+    }
+  } catch (err) {
+    console.warn('Server upload fallback:', err);
+  }
+  return base64Data;
+};
+
 export default function AdminProducts() {
   const { products, updateProduct, addProduct, deleteProduct, toggleProductStock, resetProductsToDefault } = useStore();
 
@@ -164,7 +185,8 @@ export default function AdminProducts() {
       setIsPhotoUploading(true);
       setPhotoError('');
       const compressedData = await compressImageFile(file);
-      setTempPhotoPreview(compressedData);
+      const serverUrl = await uploadImageToServer(compressedData, photoModalProduct?.name || 'produce');
+      setTempPhotoPreview(serverUrl);
       setIsPhotoUploading(false);
     } catch (err) {
       setPhotoError('Failed to process image. Please try another image file.');
@@ -190,7 +212,8 @@ export default function AdminProducts() {
     if (!file) return;
     try {
       const compressed = await compressImageFile(file);
-      setNewProduct((prev) => ({ ...prev, image: compressed }));
+      const serverUrl = await uploadImageToServer(compressed, newProduct.name || 'produce');
+      setNewProduct((prev) => ({ ...prev, image: serverUrl }));
     } catch (err) {
       alert('Could not process image file. Please try another image.');
     }
@@ -214,7 +237,8 @@ export default function AdminProducts() {
     if (!file) return;
     try {
       const compressed = await compressImageFile(file);
-      setEditingProduct(prev => ({ ...prev, image: compressed }));
+      const serverUrl = await uploadImageToServer(compressed, editingProduct?.name || 'produce');
+      setEditingProduct(prev => ({ ...prev, image: serverUrl }));
     } catch (err) {
       alert('Could not process image file. Please try another image.');
     }

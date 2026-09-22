@@ -169,7 +169,54 @@ export const StoreProvider = ({ children }) => {
     }
   });
 
-  // Save changes to localStorage
+  // Live Server Sync: fetch latest products on mount, on window focus, and periodically
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchLiveProducts = async () => {
+      try {
+        const res = await fetch('/api/products');
+        if (res.ok) {
+          const serverProducts = await res.json();
+          if (isMounted && Array.isArray(serverProducts) && serverProducts.length > 0) {
+            setProducts(serverProducts);
+            try {
+              localStorage.setItem(PRODUCTS_KEY, JSON.stringify(serverProducts));
+            } catch (e) {}
+            return;
+          }
+        }
+      } catch (err) {}
+
+      // Fallback: fetch from /store_products.json if API is unavailable
+      try {
+        const staticRes = await fetch('/store_products.json');
+        if (staticRes.ok) {
+          const data = await staticRes.json();
+          if (isMounted && Array.isArray(data) && data.length > 0) {
+            setProducts(data);
+            try {
+              localStorage.setItem(PRODUCTS_KEY, JSON.stringify(data));
+            } catch (e) {}
+          }
+        }
+      } catch (err) {}
+    };
+
+    fetchLiveProducts();
+
+    const handleFocus = () => fetchLiveProducts();
+    window.addEventListener('focus', handleFocus);
+    const interval = setInterval(fetchLiveProducts, 6000);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Save changes to localStorage and push to server
   useEffect(() => {
     try {
       localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
@@ -180,6 +227,15 @@ export const StoreProvider = ({ children }) => {
     try {
       localStorage.setItem(PRODUCTS_KEY, JSON.stringify(products));
     } catch (e) {}
+
+    // Push updated products to server API so all customer devices receive the update
+    if (products && products.length > 0) {
+      fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(products)
+      }).catch(() => {});
+    }
   }, [products]);
 
   useEffect(() => {
