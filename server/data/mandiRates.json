@@ -1,0 +1,88 @@
+{
+  "date": "September 21, 2026",
+  "time": "Updated 05:30 AM (Morning Auction)",
+  "mandiLocation": "Sabzi Mandi Badami Bagh & Multan Chungi Mandi, Lahore",
+  "rates": [
+    {
+      "item": "Potato (Aloo / آلو)",
+      "mandiWholesale": "Rs. 75 - 82 / kg",
+      "openMarketRate": "Rs. 110 - 130 / kg",
+      "engineerRate": "Rs. 95 / kg",
+      "trend": "down",
+      "difference": "Save Rs. 25/kg",
+      "notes": "New crop arrivals in abundance from Depalpur"
+    },
+    {
+      "item": "Desi Onion (Pyaz / پیاز)",
+      "mandiWholesale": "Rs. 150 - 165 / kg",
+      "openMarketRate": "Rs. 210 - 240 / kg",
+      "engineerRate": "Rs. 180 / kg",
+      "trend": "stable",
+      "difference": "Save Rs. 45/kg",
+      "notes": "Firm dry skin stock from Swat & Sindh"
+    },
+    {
+      "item": "Red Tomatoes (Tamatar / ٹماٹر)",
+      "mandiWholesale": "Rs. 115 - 125 / kg",
+      "openMarketRate": "Rs. 160 - 190 / kg",
+      "engineerRate": "Rs. 140 / kg",
+      "trend": "down",
+      "difference": "Save Rs. 35/kg",
+      "notes": "Fresh supply from Central Punjab tunnels"
+    },
+    {
+      "item": "Okra (Bhindi / بھنڈی)",
+      "mandiWholesale": "Rs. 130 - 145 / kg",
+      "openMarketRate": "Rs. 180 - 220 / kg",
+      "engineerRate": "Rs. 160 / kg",
+      "trend": "up",
+      "difference": "Save Rs. 40/kg",
+      "notes": "Small tender grade, no woody seeds"
+    },
+    {
+      "item": "Ginger (Adrak / ادرک)",
+      "mandiWholesale": "Rs. 390 - 420 / kg",
+      "openMarketRate": "Rs. 520 - 580 / kg",
+      "engineerRate": "Rs. 460 / kg",
+      "trend": "stable",
+      "difference": "Save Rs. 90/kg",
+      "notes": "Clean washed without wet soil weight"
+    },
+    {
+      "item": "Garlic (Lehsan / لہسن)",
+      "mandiWholesale": "Rs. 410 - 440 / kg",
+      "openMarketRate": "Rs. 530 - 600 / kg",
+      "engineerRate": "Rs. 480 / kg",
+      "trend": "up",
+      "difference": "Save Rs. 80/kg",
+      "notes": "Desi white garlic with tight aromatic cloves"
+    },
+    {
+      "item": "Green Chillies (Hari Mirch / ہری مرچ)",
+      "mandiWholesale": "Rs. 110 - 120 / kg",
+      "openMarketRate": "Rs. 170 - 200 / kg",
+      "engineerRate": "Rs. 140 / kg",
+      "trend": "down",
+      "difference": "Save Rs. 40/kg",
+      "notes": "Hand-picked crisp farm fresh chillies"
+    },
+    {
+      "item": "Spinach (Palak / پالک)",
+      "mandiWholesale": "Rs. 55 - 65 / kg",
+      "openMarketRate": "Rs. 95 - 120 / kg",
+      "engineerRate": "Rs. 80 / kg",
+      "trend": "stable",
+      "difference": "Save Rs. 25/kg",
+      "notes": "Broadleaf tender greens pre-cleaned"
+    },
+    {
+      "item": "Cauliflower (Gobi / گوبھی)",
+      "mandiWholesale": "Rs. 85 - 95 / kg",
+      "openMarketRate": "Rs. 130 - 160 / kg",
+      "engineerRate": "Rs. 110 / kg",
+      "trend": "down",
+      "difference": "Save Rs. 35/kg",
+      "notes": "Snow white dense curds"
+    }
+  ]
+}

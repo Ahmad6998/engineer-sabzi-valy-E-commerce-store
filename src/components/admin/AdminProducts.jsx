@@ -428,9 +428,9 @@ export default function AdminProducts() {
               </p>
             </div>
             <div className="p-3 bg-slate-800/80 rounded-xl border border-slate-700">
-              <span className="font-bold text-brand-400 block mb-1">3. Live Persistence</span>
+              <span className="font-bold text-brand-400 block mb-1">3. Live Backend & Device Sync</span>
               <p className="text-slate-300 leading-relaxed text-[11px]">
-                Every edit is stored permanently in browser storage (`localStorage`). Customers visiting your store see the updated produce and rates without restarting the app.
+                Every edit and picture upload is saved directly to the backend database server (`server/data/products.json`). All customer mobile phones and computers receive updates live without losing data.
               </p>
             </div>
           </div>

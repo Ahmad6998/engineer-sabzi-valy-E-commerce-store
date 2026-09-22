@@ -169,7 +169,34 @@ export const StoreProvider = ({ children }) => {
     }
   });
 
-  // Live Server Sync: fetch latest products on mount, on window focus, and periodically
+  // Helper: Synchronize products to backend disk storage
+  const syncProductsToServer = async (updatedList) => {
+    if (!Array.isArray(updatedList) || updatedList.length === 0) return;
+    try {
+      await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedList)
+      });
+    } catch (err) {
+      console.warn('Failed to sync products to server:', err);
+    }
+  };
+
+  // Helper: Synchronize mandi rates to backend disk storage
+  const syncMandiRatesToServer = async (ratesData) => {
+    try {
+      await fetch('/api/mandi-rates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ratesData)
+      });
+    } catch (err) {
+      console.warn('Mandi rates sync error:', err);
+    }
+  };
+
+  // Live Server Sync: fetch latest products, orders, mandi rates, and settings from backend
   useEffect(() => {
     let isMounted = true;
 
@@ -203,11 +230,67 @@ export const StoreProvider = ({ children }) => {
       } catch (err) {}
     };
 
-    fetchLiveProducts();
+    const fetchLiveOrders = async () => {
+      try {
+        const res = await fetch('/api/orders');
+        if (res.ok) {
+          const serverOrders = await res.json();
+          if (isMounted && Array.isArray(serverOrders) && serverOrders.length > 0) {
+            setOrders(serverOrders);
+            try {
+              localStorage.setItem(ORDERS_KEY, JSON.stringify(serverOrders));
+            } catch (e) {}
+          }
+        }
+      } catch (err) {}
+    };
 
-    const handleFocus = () => fetchLiveProducts();
+    const fetchLiveMandiRates = async () => {
+      try {
+        const res = await fetch('/api/mandi-rates');
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && data && Array.isArray(data.rates) && data.rates.length > 0) {
+            setMandiRates(data);
+            try {
+              localStorage.setItem(MANDI_RATES_KEY, JSON.stringify(data));
+            } catch (e) {}
+          }
+        }
+      } catch (err) {}
+    };
+
+    const fetchLiveSettings = async () => {
+      try {
+        const res = await fetch('/api/settings');
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && data && data.storeName) {
+            setStoreSettings(data);
+            try {
+              localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
+            } catch (e) {}
+          }
+        }
+      } catch (err) {}
+    };
+
+    const syncAllFromBackend = () => {
+      fetchLiveProducts();
+      fetchLiveOrders();
+      fetchLiveMandiRates();
+      fetchLiveSettings();
+    };
+
+    // Initial fetch on mount
+    syncAllFromBackend();
+
+    // Re-fetch when user switches back to browser tab or mobile app
+    const handleFocus = () => syncAllFromBackend();
     window.addEventListener('focus', handleFocus);
-    const interval = setInterval(fetchLiveProducts, 6000);
+
+    // Periodically poll backend so changes propagate automatically across devices
+    const interval = setInterval(syncAllFromBackend, 5000);
 
     return () => {
       isMounted = false;
@@ -216,7 +299,7 @@ export const StoreProvider = ({ children }) => {
     };
   }, []);
 
-  // Save changes to localStorage and push to server
+  // Save changes to localStorage only (Never auto-POST to prevent client overwrites)
   useEffect(() => {
     try {
       localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
@@ -227,15 +310,6 @@ export const StoreProvider = ({ children }) => {
     try {
       localStorage.setItem(PRODUCTS_KEY, JSON.stringify(products));
     } catch (e) {}
-
-    // Push updated products to server API so all customer devices receive the update
-    if (products && products.length > 0) {
-      fetch('/api/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(products)
-      }).catch(() => {});
-    }
   }, [products]);
 
   useEffect(() => {
@@ -256,80 +330,152 @@ export const StoreProvider = ({ children }) => {
     } catch (e) {}
   }, [adminUsers]);
 
-  // Order Actions
-  const addOrder = (newOrder) => {
-    setOrders(prev => [newOrder, ...prev]);
+  // Order Actions (Saved locally and immediately pushed to server backend)
+  const addOrder = async (newOrder) => {
+    setOrders(prev => {
+      const updated = [newOrder, ...prev.filter(o => o.orderId !== newOrder.orderId)];
+      try { localStorage.setItem(ORDERS_KEY, JSON.stringify(updated)); } catch (e) {}
+      return updated;
+    });
+    try {
+      await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newOrder)
+      });
+    } catch (err) {
+      console.warn('Failed to send order to server:', err);
+    }
   };
 
-  const updateOrderStatus = (orderId, newStatus) => {
-    setOrders(prev =>
-      prev.map(o => o.orderId === orderId ? { ...o, status: newStatus } : o)
-    );
+  const updateOrderStatus = async (orderId, newStatus) => {
+    setOrders(prev => {
+      const updated = prev.map(o => o.orderId === orderId ? { ...o, status: newStatus } : o);
+      try { localStorage.setItem(ORDERS_KEY, JSON.stringify(updated)); } catch (e) {}
+      return updated;
+    });
+    try {
+      await fetch(`/api/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+    } catch (err) {
+      console.warn('Failed to update order status on server:', err);
+    }
   };
 
-  const deleteOrder = (orderId) => {
-    setOrders(prev => prev.filter(o => o.orderId !== orderId));
+  const deleteOrder = async (orderId) => {
+    setOrders(prev => {
+      const updated = prev.filter(o => o.orderId !== orderId);
+      try { localStorage.setItem(ORDERS_KEY, JSON.stringify(updated)); } catch (e) {}
+      return updated;
+    });
+    try {
+      await fetch(`/api/orders/${orderId}`, {
+        method: 'DELETE'
+      });
+    } catch (err) {
+      console.warn('Failed to delete order on server:', err);
+    }
   };
 
-  // Product Actions
+  // Product Actions (Saved locally and pushed to server disk database)
   const updateProduct = (productId, updatedFields) => {
-    setProducts(prev =>
-      prev.map(p => p.id === productId ? { ...p, ...updatedFields } : p)
-    );
+    setProducts(prev => {
+      const updated = prev.map(p => p.id === productId ? { ...p, ...updatedFields } : p);
+      syncProductsToServer(updated);
+      try { localStorage.setItem(PRODUCTS_KEY, JSON.stringify(updated)); } catch (e) {}
+      return updated;
+    });
   };
 
   const addProduct = (newProduct) => {
     const id = newProduct.id || `custom-${Date.now()}`;
-    setProducts(prev => [
-      {
-        ...newProduct,
-        id,
-        inStock: true,
-        rating: 5.0,
-        reviewsCount: 1,
-        weightOptions: newProduct.weightOptions || [{ label: newProduct.baseUnit || '1 kg', multiplier: 1, isDefault: true }]
-      },
-      ...prev
-    ]);
+    const item = {
+      ...newProduct,
+      id,
+      inStock: true,
+      rating: 5.0,
+      reviewsCount: 1,
+      weightOptions: newProduct.weightOptions || [{ label: newProduct.baseUnit || '1 kg', multiplier: 1, isDefault: true }]
+    };
+    setProducts(prev => {
+      const updated = [item, ...prev];
+      syncProductsToServer(updated);
+      try { localStorage.setItem(PRODUCTS_KEY, JSON.stringify(updated)); } catch (e) {}
+      return updated;
+    });
   };
 
   const toggleProductStock = (productId) => {
-    setProducts(prev =>
-      prev.map(p => p.id === productId ? { ...p, inStock: !p.inStock } : p)
-    );
+    setProducts(prev => {
+      const updated = prev.map(p => p.id === productId ? { ...p, inStock: !p.inStock } : p);
+      syncProductsToServer(updated);
+      try { localStorage.setItem(PRODUCTS_KEY, JSON.stringify(updated)); } catch (e) {}
+      return updated;
+    });
   };
 
   const deleteProduct = (productId) => {
-    setProducts(prev => prev.filter(p => p.id !== productId));
+    setProducts(prev => {
+      const updated = prev.filter(p => p.id !== productId);
+      syncProductsToServer(updated);
+      try { localStorage.setItem(PRODUCTS_KEY, JSON.stringify(updated)); } catch (e) {}
+      return updated;
+    });
   };
 
   const resetProductsToDefault = () => {
     setProducts(INITIAL_PRODUCTS);
+    syncProductsToServer(INITIAL_PRODUCTS);
+    try { localStorage.setItem(PRODUCTS_KEY, JSON.stringify(INITIAL_PRODUCTS)); } catch (e) {}
   };
 
-  // Mandi Rate Actions
+  // Mandi Rate Actions (Saved locally and pushed to server disk database)
   const updateMandiRate = (index, updatedRate) => {
     setMandiRates(prev => {
       const updatedRates = [...prev.rates];
       updatedRates[index] = { ...updatedRates[index], ...updatedRate };
-      return { ...prev, rates: updatedRates };
+      const updatedState = { ...prev, rates: updatedRates };
+      syncMandiRatesToServer(updatedState);
+      try { localStorage.setItem(MANDI_RATES_KEY, JSON.stringify(updatedState)); } catch (e) {}
+      return updatedState;
     });
   };
 
   const addMandiRate = (newRate) => {
-    setMandiRates(prev => ({
-      ...prev,
-      rates: [newRate, ...prev.rates]
-    }));
+    setMandiRates(prev => {
+      const updatedState = {
+        ...prev,
+        rates: [newRate, ...prev.rates]
+      };
+      syncMandiRatesToServer(updatedState);
+      try { localStorage.setItem(MANDI_RATES_KEY, JSON.stringify(updatedState)); } catch (e) {}
+      return updatedState;
+    });
   };
 
   const resetMandiRatesToDefault = () => {
     setMandiRates(INITIAL_MANDI_RATES);
+    syncMandiRatesToServer(INITIAL_MANDI_RATES);
+    try { localStorage.setItem(MANDI_RATES_KEY, JSON.stringify(INITIAL_MANDI_RATES)); } catch (e) {}
   };
 
-  // Settings Actions
+  // Settings Actions (Saved locally and pushed to server disk database)
   const updateSettings = (newSettings) => {
-    setStoreSettings(prev => ({ ...prev, ...newSettings }));
+    setStoreSettings(prev => {
+      const updated = { ...prev, ...newSettings };
+      try {
+        fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updated)
+        }).catch(() => {});
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
   };
 
   // Admin User Actions
