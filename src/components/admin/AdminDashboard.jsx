@@ -22,7 +22,7 @@ export default function AdminDashboard({ onNavigateTab }) {
             Welcome back, Engineer Sabzi Valy!
           </h1>
           <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl">
-            Real-time control over today's farm orders, live Mandi rates, and doorstep delivery dispatches across Lahore.
+            {/* Real-time control over today's farm orders, live Mandi rates, and doorstep delivery dispatches across Lahore. */}
           </p>
         </div>
 
