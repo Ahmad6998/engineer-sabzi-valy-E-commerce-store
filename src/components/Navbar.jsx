@@ -29,7 +29,7 @@ export default function Navbar({
               </div>
               <div className="flex flex-col shrink-0">
                 <div className="flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="font-extrabold text-base sm:text-lg lg:text-xl tracking-tight text-gray-900 leading-none">
+                  <span className="font-extrabold text-sm sm:text-lg lg:text-xl tracking-tight text-gray-900 leading-none">
                     ENGINEER <span className="text-brand-600 font-black">SABZI VALY</span>
                   </span>
                 </div>
@@ -37,7 +37,7 @@ export default function Navbar({
                   <span className="text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide">
                     {/* منڈی سے سیدھا آپ کے گھر تک */}
                   </span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand-500 hidden sm:inline"></span>
                   <span className="text-[10px] text-brand-700 font-semibold hidden sm:inline">
                     {/* 100% Digital Weighed */}
                   </span>

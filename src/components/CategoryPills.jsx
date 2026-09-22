@@ -34,7 +34,7 @@ export default function CategoryPills({ selectedCategory, onSelectCategory }) {
   };
 
   return (
-    <div className="sticky top-[69px] z-30 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-xs py-2.5 sm:py-3 transition-all">
+    <div className="sticky top-[112px] md:top-[70px] z-30 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-xs py-2.5 sm:py-3 transition-all">
       <div className="w-full px-2 sm:px-4 lg:px-6 relative flex items-center">
         
         {/* Left Scroll Navigation Button */}
