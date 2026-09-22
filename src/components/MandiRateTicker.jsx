@@ -36,7 +36,7 @@ export function MandiRateTicker({ onOpenModal, onSelectItem, onQuickAddToCart })
         {/* Animated Ticker Title Badge with Live Beacon */}
         <button
           onClick={onOpenModal}
-          className="flex items-center gap-2 bg-gradient-to-r from-brand-500 via-emerald-400 to-brand-500 bg-[length:200%_auto] animate-gradient-wave text-slate-950 font-black px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs shrink-0 shadow-md shadow-brand-500/20 active:scale-95 transition-all cursor-pointer z-10"
+          className="flex items-center gap-1.5 sm:gap-2 bg-gradient-to-r from-brand-500 via-emerald-400 to-brand-500 bg-[length:200%_auto] animate-gradient-wave text-slate-950 font-black px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl text-[10px] sm:text-xs shrink-0 shadow-md shadow-brand-500/20 active:scale-95 transition-all cursor-pointer z-10"
           title="Click to view full Mandi Auction Rate Sheet"
         >
           <span className="relative flex h-2 w-2">
@@ -44,7 +44,10 @@ export function MandiRateTicker({ onOpenModal, onSelectItem, onQuickAddToCart })
             <span className="relative inline-flex rounded-full h-2 w-2 bg-slate-950"></span>
           </span>
           <BarChart2 className="w-3.5 h-3.5 shrink-0" />
-          <span className="tracking-wide">MANDI RATES TODAY</span>
+          <span className="tracking-wide">
+            <span className="sm:hidden">MANDI RATES</span>
+            <span className="hidden sm:inline">MANDI RATES TODAY</span>
+          </span>
         </button>
 
         {/* Animated Marquee Ticker Track */}

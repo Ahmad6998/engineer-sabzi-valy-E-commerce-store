@@ -33,18 +33,22 @@
 /* Continuous smooth scrolling marquee for Mandi Rates */
 @keyframes ticker-marquee {
   0% {
-    transform: translateX(0);
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
   }
   100% {
-    transform: translateX(-50%);
+    transform: translate3d(-50%, 0, 0);
+    -webkit-transform: translate3d(-50%, 0, 0);
   }
 }
 
 .animate-ticker {
   display: flex;
   width: max-content;
-  animation: ticker-marquee 40s linear infinite;
+  animation: ticker-marquee 35s linear infinite;
   will-change: transform;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 .animate-ticker:hover {
@@ -89,16 +93,19 @@
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(2px) scale(0.995);
+    transform: translate3d(0, 4px, 0);
+    -webkit-transform: translate3d(0, 4px, 0);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
   }
 }
 
 .animate-fadeIn {
   animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity, transform;
 }
 
 /* Pop-in scale animation for location modal and dialogs */
