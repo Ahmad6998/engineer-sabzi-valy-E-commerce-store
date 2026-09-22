@@ -126,7 +126,14 @@ export const StoreProvider = ({ children }) => {
   const [products, setProducts] = useState(() => {
     try {
       const saved = localStorage.getItem(PRODUCTS_KEY);
-      return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
+      let list = saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
+      list = list.map(p => {
+        if (p.id === 'lady-finger-bhindi' && (p.image?.includes('1565680018434') || !p.image)) {
+          return { ...p, image: 'https://images.unsplash.com/photo-1425543103986-22abb7d7e8d2?auto=format&fit=crop&w=600&q=80' };
+        }
+        return p;
+      });
+      return list;
     } catch (e) {
       return INITIAL_PRODUCTS;
     }
@@ -328,5 +335,31 @@ export const StoreProvider = ({ children }) => {
   );
 };
 
-export const useStore = () => useContext(StoreContext);
+export const useStore = () => {
+  const context = useContext(StoreContext);
+  if (!context) {
+    return {
+      products: [],
+      orders: [],
+      mandiRates: [],
+      addOrder: () => {},
+      updateOrderStatus: () => {},
+      deleteOrder: () => {},
+      addProduct: () => {},
+      updateProduct: () => {},
+      deleteProduct: () => {},
+      resetProductsToDefault: () => {},
+      updateMandiRate: () => {},
+      addMandiRate: () => {},
+      resetMandiRatesToDefault: () => {},
+      storeSettings: {},
+      updateSettings: () => {},
+      adminUsers: [],
+      registerAdmin: () => {},
+      updateAdminPassword: () => {},
+      deleteAdmin: () => {}
+    };
+  }
+  return context;
+};
 

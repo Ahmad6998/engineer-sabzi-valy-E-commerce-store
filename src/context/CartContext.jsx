@@ -212,5 +212,40 @@ export const CartProvider = ({ children }) => {
   );
 };
 
-export const useCart = () => useContext(CartContext);
+export const useCart = () => {
+  const context = useContext(CartContext);
+  if (!context) {
+    return {
+      cartItems: [],
+      addToCart: () => {},
+      updateQuantity: () => {},
+      removeFromCart: () => {},
+      clearCart: () => {},
+      subtotal: 0,
+      discountAmount: 0,
+      deliveryFee: 0,
+      grandTotal: 0,
+      totalItemCount: 0,
+      amountNeededForFree: 0,
+      freeDeliveryProgress: 0,
+      isFreeDeliveryQualified: false,
+      appliedCoupon: null,
+      applyCoupon: () => {},
+      removeCoupon: () => {},
+      couponError: '',
+      isCartOpen: false,
+      setIsCartOpen: () => {},
+      selectedArea: 'lhr-multan-road',
+      setSelectedArea: () => {},
+      orderType: 'delivery',
+      setOrderType: () => {},
+      isLocationModalOpen: false,
+      setIsLocationModalOpen: () => {},
+      confirmLocation: () => {},
+      selectedTimeSlot: 'slot-morning',
+      setSelectedTimeSlot: () => {}
+    };
+  }
+  return context;
+};
 

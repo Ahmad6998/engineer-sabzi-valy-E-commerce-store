@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, ShieldCheck, Scale, Sparkles, Clock, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Scale, Sparkles, ArrowRight, CheckCircle2 } from 'lucide-react';
 
 const SLIDES = [
   {
@@ -7,7 +7,7 @@ const SLIDES = [
     tag: 'Farm To Kitchen • Sourced at 4 AM',
     title: 'Pure, Fresh & Digital-Weighed Mandi Produce',
     urduTitle: 'منڈی سے سیدھا آپ کے کچن تک — خالص، صاف اور ڈیجیٹل تول',
-    description: 'Procured before sunrise from Badami Bagh & Multan Chungi Mandi. Graded, dirt-free, and delivered directly to your doorstep across Lahore.',
+    description: '',
     ctaText: 'Explore Today\'s Harvest',
     categoryTarget: 'vegetables',
     bgGradient: 'from-emerald-900 via-brand-900 to-green-950',
@@ -20,7 +20,7 @@ const SLIDES = [
     tag: 'Big Family Savings',
     title: 'Weekly Family Bachat Baskets — Save 22%',
     urduTitle: 'ہفتہ وار فیملی بچت پیکجز — آلو، پیاز، ٹماٹر اور ہری سبزیاں',
-    description: 'Get all your weekly cooking essentials in one hygienic box. Includes free Coriander, Mint, and Green Chillies with every family combo!',
+    description: '',
     ctaText: 'View Bachat Bundles',
     categoryTarget: 'bundles',
     bgGradient: 'from-amber-950 via-brand-950 to-emerald-950',
@@ -33,7 +33,7 @@ const SLIDES = [
     tag: 'The Engineer\'s Promise',
     title: 'Zero Dhoka: Certified Gram-by-Gram Digital Weighing',
     urduTitle: 'انجینئر کی ضمانت: کوئی مٹی کا وزن نہیں، ہر گرام ڈیجیٹل',
-    description: 'Tired of muddy roots and dishonest manual scales? Our produce is washed, sorted, and weighed on certified digital balances. Guaranteed full weight.',
+    description: '',
     ctaText: 'Order Fresh Today',
     categoryTarget: 'all',
     bgGradient: 'from-teal-950 via-brand-900 to-green-900',
@@ -239,51 +239,6 @@ export default function HeroBanner({ onSelectCategory, onOpenMandiModal }) {
               }`}
             />
           ))}
-        </div>
-
-      </div>
-
-      {/* 4 Feature Highlights Strip */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
-        
-        <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
-            <Clock className="w-5 h-5" />
-          </div>
-          <div>
-            <h4 className="text-xs font-bold text-gray-900">4:00 AM Mandi Fresh</h4>
-            <p className="text-[11px] text-gray-500">Picked at dawn daily</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
-            <Scale className="w-5 h-5" />
-          </div>
-          <div>
-            <h4 className="text-xs font-bold text-gray-900">Digital Scale Guarantee</h4>
-            <p className="text-[11px] text-gray-500">Accurate gram-by-gram</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0">
-            <Sparkles className="w-5 h-5" />
-          </div>
-          <div>
-            <h4 className="text-xs font-bold text-gray-900">Washed & Graded</h4>
-            <p className="text-[11px] text-gray-500">No heavy dirt or mud</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center shrink-0">
-            <ShieldCheck className="w-5 h-5" />
-          </div>
-          <div>
-            <h4 className="text-xs font-bold text-gray-900">100% Replacement</h4>
-            <p className="text-[11px] text-gray-500">Zero-hassle guarantee</p>
-          </div>
         </div>
 
       </div>

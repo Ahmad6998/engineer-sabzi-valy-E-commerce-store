@@ -35,11 +35,11 @@ export default function Navbar({
                 </div>
                 <div className="flex items-center gap-1 mt-0.5 whitespace-nowrap">
                   <span className="text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide">
-                    منڈی سے سیدھا آپ کے گھر تک
+                    {/* منڈی سے سیدھا آپ کے گھر تک */}
                   </span>
                   <span className="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
                   <span className="text-[10px] text-brand-700 font-semibold hidden sm:inline">
-                    100% Digital Weighed
+                    {/* 100% Digital Weighed */}
                   </span>
                 </div>
               </div>

@@ -82,7 +82,7 @@ export const PRODUCTS = [
     urduName: 'تازہ بھنڈی',
     category: 'vegetables',
     badge: 'Tender & Fresh',
-    image: 'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?auto=format&fit=crop&w=600&q=80',
+    image: 'https://images.unsplash.com/photo-1425543103986-22abb7d7e8d2?auto=format&fit=crop&w=600&q=80',
     basePrice: 160,
     originalPrice: 190,
     baseUnit: '1 kg',
