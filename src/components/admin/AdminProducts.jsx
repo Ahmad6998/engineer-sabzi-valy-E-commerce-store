@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
-import { Search, Plus, Trash2, Edit2, Check, X, Star, ArrowUpDown, RotateCcw, Image, Tag, Camera, Upload, UploadCloud, Sparkles, Info } from 'lucide-react';
+import { Search, Plus, Trash2, Edit2, Check, X, Star, ArrowUpDown, Image, Tag, Camera, Upload, UploadCloud, Sparkles, Info } from 'lucide-react';
 import { CATEGORIES } from '../../data/products';
 
 // Image compression helper for clean, fast base64 storage
@@ -61,7 +61,7 @@ const uploadImageToServer = async (base64Data, produceName) => {
 };
 
 export default function AdminProducts() {
-  const { products, updateProduct, addProduct, deleteProduct, toggleProductStock, resetProductsToDefault } = useStore();
+  const { products, updateProduct, addProduct, deleteProduct, toggleProductStock } = useStore();
 
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -79,8 +79,6 @@ export default function AdminProducts() {
   const [tempPhotoPreview, setTempPhotoPreview] = useState('');
   const [isPhotoUploading, setIsPhotoUploading] = useState(false);
   const [photoError, setPhotoError] = useState('');
-  const [photoSourceMode, setPhotoSourceMode] = useState('upload'); // 'upload' | 'url'
-  const [customPhotoUrl, setCustomPhotoUrl] = useState('');
 
   // Badge inline editing state
   const [editingBadgeId, setEditingBadgeId] = useState(null);
@@ -133,7 +131,7 @@ export default function AdminProducts() {
     }
   };
 
-  const handleSaveBadge = (productId, basePrice) => {
+  const handleSaveBadge = async (productId, basePrice) => {
     let finalBadge = null;
     let newOriginalPrice = undefined;
 
@@ -156,9 +154,9 @@ export default function AdminProducts() {
       updates.originalPrice = newOriginalPrice;
     }
 
-    updateProduct(productId, updates);
+    await updateProduct(productId, updates);
     setEditingBadgeId(null);
-    triggerSaveToast(`✓ Badge updated & saved for this product.`);
+    triggerSaveToast(`✓ Badge updated & saved to backend for this product.`);
   };
 
   const triggerSaveToast = (message, type = 'success') => {
@@ -172,9 +170,7 @@ export default function AdminProducts() {
   const handleOpenPhotoModal = (product) => {
     setPhotoModalProduct(product);
     setTempPhotoPreview(product.image);
-    setCustomPhotoUrl(product.image);
     setPhotoError('');
-    setPhotoSourceMode('upload');
   };
 
   // 2. Handle file selection & compression for existing product
@@ -195,14 +191,11 @@ export default function AdminProducts() {
   };
 
   // 3. Save new photo to product
-  const handleSavePhoto = () => {
+  const handleSavePhoto = async () => {
     if (!photoModalProduct) return;
-    const finalImage =
-      photoSourceMode === 'url'
-        ? customPhotoUrl.trim() || photoModalProduct.image
-        : tempPhotoPreview || photoModalProduct.image;
-    updateProduct(photoModalProduct.id, { image: finalImage });
-    triggerSaveToast(`✓ Picture updated & saved for "${photoModalProduct.name}".`);
+    const finalImage = tempPhotoPreview || photoModalProduct.image;
+    await updateProduct(photoModalProduct.id, { image: finalImage });
+    triggerSaveToast(`✓ Picture updated & saved to backend for "${photoModalProduct.name}".`);
     setPhotoModalProduct(null);
   };
 
@@ -244,7 +237,7 @@ export default function AdminProducts() {
     }
   };
 
-  const handleSaveEditedProduct = (e) => {
+  const handleSaveEditedProduct = async (e) => {
     e.preventDefault();
     if (!editingProduct) return;
 
@@ -270,9 +263,9 @@ export default function AdminProducts() {
       ]
     };
 
-    updateProduct(editingProduct.id, updatedData);
+    await updateProduct(editingProduct.id, updatedData);
     setEditingProduct(null);
-    triggerSaveToast(`✓ "${finalName}" saved successfully! Live store updated.`);
+    triggerSaveToast(`✓ "${finalName}" saved to backend! Changes live on customer devices.`);
   };
 
   const filteredProducts = products.filter(p => {
@@ -293,22 +286,22 @@ export default function AdminProducts() {
     setTempPrice(product.basePrice.toString());
   };
 
-  const handleSavePrice = (productId) => {
+  const handleSavePrice = async (productId) => {
     const parsed = parseInt(tempPrice, 10);
     if (!isNaN(parsed) && parsed > 0) {
-      updateProduct(productId, { basePrice: parsed });
-      triggerSaveToast(`✓ Price updated to Rs. ${parsed} and saved.`);
+      await updateProduct(productId, { basePrice: parsed });
+      triggerSaveToast(`✓ Price updated to Rs. ${parsed} and saved to backend.`);
     }
     setEditingPriceId(null);
   };
 
-  const handleCreateProduct = (e) => {
+  const handleCreateProduct = async (e) => {
     e.preventDefault();
     if (!newProduct.name || !newProduct.basePrice) return;
 
     const createdName = newProduct.name.trim();
 
-    addProduct({
+    await addProduct({
       ...newProduct,
       name: createdName,
       basePrice: parseInt(newProduct.basePrice, 10),
@@ -320,6 +313,7 @@ export default function AdminProducts() {
     });
 
     setIsAddModalOpen(false);
+    triggerSaveToast(`✓ "${createdName}" added to catalog and saved to backend.`);
     setNewProduct({
       name: '',
       urduName: '',
@@ -368,18 +362,6 @@ export default function AdminProducts() {
           >
             <Plus className="w-4 h-4" />
             <span>Add New Item</span>
-          </button>
-          <button
-            onClick={() => {
-              if (window.confirm('Reset all products to initial catalog?')) {
-                resetProductsToDefault();
-                triggerSaveToast('Catalog reset to default template.');
-              }
-            }}
-            className="p-2 bg-white hover:bg-gray-100 text-gray-500 border border-gray-200 rounded-xl transition-colors cursor-pointer"
-            title="Reset to default catalog"
-          >
-            <RotateCcw className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -487,7 +469,30 @@ export default function AdminProducts() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 font-medium text-gray-700">
-              {filteredProducts.map((p) => {
+              {filteredProducts.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-16 text-center text-gray-500">
+                    <div className="max-w-xs mx-auto space-y-3">
+                      <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto border border-emerald-100">
+                        <Plus className="w-7 h-7" />
+                      </div>
+                      <h4 className="font-black text-gray-800 text-sm">Produce Catalog is Empty</h4>
+                      <p className="text-xs text-gray-400">
+                        No produce items in catalog yet. Click "+ Add New Item" above to add your fresh produce!
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer active:scale-95"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Add New Produce Item</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredProducts.map((p) => {
                 const isEditingPrice = editingPriceId === p.id;
 
                 return (
@@ -753,7 +758,11 @@ export default function AdminProducts() {
                     {/* Stock Status Toggle */}
                     <td className="py-3 px-4">
                       <button
-                        onClick={() => toggleProductStock(p.id)}
+                        type="button"
+                        onClick={async () => {
+                          await toggleProductStock(p.id);
+                          triggerSaveToast(`✓ "${p.name}" marked as ${!p.inStock ? 'In Stock' : 'Out of Stock'} on backend.`);
+                        }}
                         className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
                           p.inStock
                             ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
@@ -778,10 +787,10 @@ export default function AdminProducts() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
+                          onClick={async () => {
                             if (window.confirm(`Delete ${p.name}? This will remove it from the store.`)) {
-                              deleteProduct(p.id);
-                              triggerSaveToast(`🗑️ "${p.name}" deleted from store.`);
+                              await deleteProduct(p.id);
+                              triggerSaveToast(`🗑️ "${p.name}" deleted from store and backend.`);
                             }
                           }}
                           className="p-1.5 text-gray-400 hover:text-red-600 rounded-xl hover:bg-red-50 transition-colors cursor-pointer"
@@ -794,7 +803,8 @@ export default function AdminProducts() {
 
                   </tr>
                 );
-              })}
+              })
+            )}
             </tbody>
           </table>
         </div>
@@ -901,14 +911,14 @@ export default function AdminProducts() {
                 </div>
               </div>
 
-              {/* Produce Picture Upload / URL */}
+              {/* Produce Picture Upload */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-gray-700 block">
                     Produce Picture *
                   </label>
                   <span className="text-[10px] text-gray-400">
-                    Upload from device or paste link
+                    Upload from device
                   </span>
                 </div>
 
@@ -928,9 +938,9 @@ export default function AdminProducts() {
                     )}
                   </div>
 
-                  {/* Upload button and URL input */}
-                  <div className="flex-1 space-y-1.5">
-                    <label className="flex items-center justify-center gap-2 px-3 py-2 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95">
+                  {/* Upload button */}
+                  <div className="flex-1">
+                    <label className="flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95">
                       <UploadCloud className="w-4 h-4 text-brand-600" />
                       <span>Upload Picture from Device</span>
                       <input
@@ -940,13 +950,6 @@ export default function AdminProducts() {
                         className="hidden"
                       />
                     </label>
-                    <input
-                      type="url"
-                      value={newProduct.image}
-                      onChange={(e) => setNewProduct({ ...newProduct, image: e.target.value })}
-                      placeholder="Or paste image URL (https://...)"
-                      className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-[11px] focus:outline-none focus:ring-1 focus:ring-brand-500 bg-gray-50"
-                    />
                   </div>
                 </div>
               </div>
@@ -1131,14 +1134,14 @@ export default function AdminProducts() {
                 </div>
               </div>
 
-              {/* Picture Upload / URL */}
+              {/* Picture Upload */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-gray-700 block">
                     Produce Picture
                   </label>
                   <span className="text-[10px] text-gray-400">
-                    Upload from device or paste link
+                    Upload from device
                   </span>
                 </div>
 
@@ -1157,8 +1160,8 @@ export default function AdminProducts() {
                     )}
                   </div>
 
-                  <div className="flex-1 space-y-1.5">
-                    <label className="flex items-center justify-center gap-2 px-3 py-2 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95">
+                  <div className="flex-1">
+                    <label className="flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95">
                       <UploadCloud className="w-4 h-4 text-brand-600" />
                       <span>Upload New Picture from Device</span>
                       <input
@@ -1168,13 +1171,6 @@ export default function AdminProducts() {
                         className="hidden"
                       />
                     </label>
-                    <input
-                      type="url"
-                      value={editingProduct.image}
-                      onChange={(e) => setEditingProduct({ ...editingProduct, image: e.target.value })}
-                      placeholder="Or paste image URL (https://...)"
-                      className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-[11px] focus:outline-none focus:ring-1 focus:ring-brand-500 bg-gray-50"
-                    />
                   </div>
                 </div>
               </div>
@@ -1269,36 +1265,10 @@ export default function AdminProducts() {
                 </div>
               )}
 
-              {/* Mode Tabs */}
-              <div className="flex bg-gray-100 p-1 rounded-xl">
-                <button
-                  type="button"
-                  onClick={() => setPhotoSourceMode('upload')}
-                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                    photoSourceMode === 'upload'
-                      ? 'bg-white text-gray-900 shadow-xs'
-                      : 'text-gray-500 hover:text-gray-800'
-                  }`}
-                >
-                  📁 Upload from Device
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPhotoSourceMode('url')}
-                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                    photoSourceMode === 'url'
-                      ? 'bg-white text-gray-900 shadow-xs'
-                      : 'text-gray-500 hover:text-gray-800'
-                  }`}
-                >
-                  🌐 Paste Web Link
-                </button>
-              </div>
-
               {/* Photo Preview Box */}
               <div className="relative aspect-4/3 w-full rounded-2xl overflow-hidden bg-gray-100 border-2 border-dashed border-gray-200 flex items-center justify-center group shadow-inner">
                 <img
-                  src={photoSourceMode === 'url' ? customPhotoUrl : tempPhotoPreview}
+                  src={tempPhotoPreview}
                   alt="Produce Preview"
                   className="w-full h-full object-cover"
                 />
@@ -1309,42 +1279,24 @@ export default function AdminProducts() {
                 )}
               </div>
 
-              {/* 1. Upload File Input */}
-              {photoSourceMode === 'upload' && (
-                <div>
-                  <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-brand-300 hover:border-brand-500 rounded-2xl bg-brand-50/50 hover:bg-brand-50 transition-colors cursor-pointer text-center">
-                    <UploadCloud className="w-8 h-8 text-brand-600 mb-1.5" />
-                    <span className="text-xs font-bold text-gray-800">
-                      Click to choose picture from computer / mobile
-                    </span>
-                    <span className="text-[10px] text-gray-500 mt-0.5">
-                      Supports JPG, PNG, WebP (Automatically compressed & saved)
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-              )}
-
-              {/* 2. Web URL Input */}
-              {photoSourceMode === 'url' && (
-                <div>
-                  <label className="text-xs font-bold text-gray-700 block mb-1">
-                    Image Web URL
-                  </label>
+              {/* Upload File Input */}
+              <div>
+                <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-brand-300 hover:border-brand-500 rounded-2xl bg-brand-50/50 hover:bg-brand-50 transition-colors cursor-pointer text-center">
+                  <UploadCloud className="w-8 h-8 text-brand-600 mb-1.5" />
+                  <span className="text-xs font-bold text-gray-800">
+                    Click to choose picture from computer / mobile
+                  </span>
+                  <span className="text-[10px] text-gray-500 mt-0.5">
+                    Supports JPG, PNG, WebP (Automatically compressed & saved)
+                  </span>
                   <input
-                    type="url"
-                    value={customPhotoUrl}
-                    onChange={(e) => setCustomPhotoUrl(e.target.value)}
-                    placeholder="https://images.unsplash.com/photo-..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
                   />
-                </div>
-              )}
+                </label>
+              </div>
 
               {/* Action Buttons */}
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">

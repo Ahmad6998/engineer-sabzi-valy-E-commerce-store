@@ -69,8 +69,10 @@ const sendJson = (res, statusCode, data) => {
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cache-Control, Pragma');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.end(JSON.stringify(data));
 };
 
@@ -127,14 +129,14 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 404, { error: 'File not found' });
   }
 
-  // 3. Products Endpoints (/api/products)
+  // 3. Products Endpoints (/api/products & /api/products/:id)
   if (pathname === '/api/products') {
     if (req.method === 'GET') {
       const products = readJson('products.json', null);
-      if (products && Array.isArray(products) && products.length > 0) {
+      if (products !== null && Array.isArray(products)) {
         return sendJson(res, 200, products);
       }
-      return sendJson(res, 404, { error: 'No products stored yet' });
+      return sendJson(res, 200, []);
     }
 
     if (req.method === 'POST') {
@@ -145,11 +147,47 @@ const server = http.createServer(async (req, res) => {
           // Also sync to public folder for static build compatibility
           try {
             fs.writeFileSync(path.resolve(ROOT_DIR, 'public/store_products.json'), JSON.stringify(body, null, 2), 'utf-8');
-            fs.writeFileSync(path.resolve(ROOT_DIR, 'src/data/store_products.json'), JSON.stringify(body, null, 2), 'utf-8');
           } catch (e) {}
           return sendJson(res, 200, { success: true, count: body.length });
+        } else if (body && body.id) {
+          const current = readJson('products.json', []);
+          const exists = current.some(p => p.id === body.id);
+          const updated = exists ? current.map(p => p.id === body.id ? { ...p, ...body } : p) : [body, ...current];
+          writeJson('products.json', updated);
+          try {
+            fs.writeFileSync(path.resolve(ROOT_DIR, 'public/store_products.json'), JSON.stringify(updated, null, 2), 'utf-8');
+          } catch (e) {}
+          return sendJson(res, 200, { success: true, product: body });
         }
-        return sendJson(res, 400, { error: 'Expected an array of products' });
+        return sendJson(res, 400, { error: 'Expected an array of products or a product object' });
+      } catch (err) {
+        return sendJson(res, 400, { error: err.message });
+      }
+    }
+  }
+
+  if (pathname.startsWith('/api/products/')) {
+    const prodId = decodeURIComponent(pathname.replace('/api/products/', ''));
+    const current = readJson('products.json', []);
+
+    if (req.method === 'DELETE') {
+      const updated = current.filter(p => p.id !== prodId);
+      writeJson('products.json', updated);
+      try {
+        fs.writeFileSync(path.resolve(ROOT_DIR, 'public/store_products.json'), JSON.stringify(updated, null, 2), 'utf-8');
+      } catch (e) {}
+      return sendJson(res, 200, { success: true, deletedId: prodId, count: updated.length });
+    }
+
+    if (req.method === 'PATCH' || req.method === 'PUT') {
+      try {
+        const updates = await parseBody(req);
+        const updated = current.map(p => p.id === prodId ? { ...p, ...updates } : p);
+        writeJson('products.json', updated);
+        try {
+          fs.writeFileSync(path.resolve(ROOT_DIR, 'public/store_products.json'), JSON.stringify(updated, null, 2), 'utf-8');
+        } catch (e) {}
+        return sendJson(res, 200, { success: true, id: prodId });
       } catch (err) {
         return sendJson(res, 400, { error: err.message });
       }

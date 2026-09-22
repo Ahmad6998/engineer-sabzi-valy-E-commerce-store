@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { PRODUCTS as INITIAL_PRODUCTS } from '../data/products';
 import { TODAY_MANDI_RATES as INITIAL_MANDI_RATES } from '../data/mandiRates';
 import { STORE_SETTINGS as INITIAL_STORE_SETTINGS, DELIVERY_AREAS } from '../data/areas';
@@ -7,7 +7,7 @@ import { INITIAL_ADMIN_USERS } from '../data/adminUsers';
 const StoreContext = createContext();
 
 const ORDERS_KEY = 'engineer_sabzi_valy_orders_v2';
-const PRODUCTS_KEY = 'engineer_sabzi_valy_products_v2';
+const PRODUCTS_KEY = 'engineer_sabzi_valy_products_v3';
 const MANDI_RATES_KEY = 'engineer_sabzi_valy_mandi_rates_v2';
 const SETTINGS_KEY = 'engineer_sabzi_valy_settings_v2';
 const ADMIN_USERS_KEY = 'engineer_sabzi_valy_admin_users_v2';
@@ -126,18 +126,21 @@ export const StoreProvider = ({ children }) => {
   const [products, setProducts] = useState(() => {
     try {
       const saved = localStorage.getItem(PRODUCTS_KEY);
-      let list = saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
-      list = list.map(p => {
-        if (p.id === 'lady-finger-bhindi' && (p.image?.includes('1565680018434') || !p.image)) {
-          return { ...p, image: 'https://images.unsplash.com/photo-1425543103986-22abb7d7e8d2?auto=format&fit=crop&w=600&q=80' };
-        }
-        return p;
-      });
-      return list;
+      if (saved !== null) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+      return INITIAL_PRODUCTS || [];
     } catch (e) {
-      return INITIAL_PRODUCTS;
+      return [];
     }
   });
+
+  // Always-current products reference for immediate synchronous mutations
+  const productsRef = useRef(products);
+  useEffect(() => {
+    productsRef.current = products;
+  }, [products]);
 
   // Mandi Rates State with localStorage persistence
   const [mandiRates, setMandiRates] = useState(() => {
@@ -169,26 +172,42 @@ export const StoreProvider = ({ children }) => {
     }
   });
 
+  // Ref to prevent polling from reverting recent admin actions
+  const lastAdminMutationRef = useRef(0);
+
   // Helper: Synchronize products to backend disk storage
   const syncProductsToServer = async (updatedList) => {
-    if (!Array.isArray(updatedList) || updatedList.length === 0) return;
+    if (!Array.isArray(updatedList)) return false;
+    lastAdminMutationRef.current = Date.now();
     try {
-      await fetch('/api/products', {
+      const res = await fetch(`/api/products?t=${Date.now()}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        },
         body: JSON.stringify(updatedList)
       });
+      if (res.ok) {
+        return true;
+      }
     } catch (err) {
       console.warn('Failed to sync products to server:', err);
     }
+    return false;
   };
 
   // Helper: Synchronize mandi rates to backend disk storage
   const syncMandiRatesToServer = async (ratesData) => {
     try {
-      await fetch('/api/mandi-rates', {
+      await fetch(`/api/mandi-rates?t=${Date.now()}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        },
         body: JSON.stringify(ratesData)
       });
     } catch (err) {
@@ -201,11 +220,22 @@ export const StoreProvider = ({ children }) => {
     let isMounted = true;
 
     const fetchLiveProducts = async () => {
+      // Don't overwrite if admin made a local change in the last 6 seconds
+      if (Date.now() - lastAdminMutationRef.current < 6000) return;
+
       try {
-        const res = await fetch('/api/products');
+        const res = await fetch(`/api/products?t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        });
         if (res.ok) {
           const serverProducts = await res.json();
-          if (isMounted && Array.isArray(serverProducts) && serverProducts.length > 0) {
+          if (isMounted && Array.isArray(serverProducts)) {
+            if (Date.now() - lastAdminMutationRef.current < 6000) return;
+            productsRef.current = serverProducts;
             setProducts(serverProducts);
             try {
               localStorage.setItem(PRODUCTS_KEY, JSON.stringify(serverProducts));
@@ -217,10 +247,18 @@ export const StoreProvider = ({ children }) => {
 
       // Fallback: fetch from /store_products.json if API is unavailable
       try {
-        const staticRes = await fetch('/store_products.json');
+        const staticRes = await fetch(`/store_products.json?t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        });
         if (staticRes.ok) {
           const data = await staticRes.json();
-          if (isMounted && Array.isArray(data) && data.length > 0) {
+          if (isMounted && Array.isArray(data)) {
+            if (Date.now() - lastAdminMutationRef.current < 6000) return;
+            productsRef.current = data;
             setProducts(data);
             try {
               localStorage.setItem(PRODUCTS_KEY, JSON.stringify(data));
@@ -232,7 +270,13 @@ export const StoreProvider = ({ children }) => {
 
     const fetchLiveOrders = async () => {
       try {
-        const res = await fetch('/api/orders');
+        const res = await fetch(`/api/orders?t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        });
         if (res.ok) {
           const serverOrders = await res.json();
           if (isMounted && Array.isArray(serverOrders) && serverOrders.length > 0) {
@@ -247,7 +291,13 @@ export const StoreProvider = ({ children }) => {
 
     const fetchLiveMandiRates = async () => {
       try {
-        const res = await fetch('/api/mandi-rates');
+        const res = await fetch(`/api/mandi-rates?t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        });
         if (res.ok) {
           const data = await res.json();
           if (isMounted && data && Array.isArray(data.rates) && data.rates.length > 0) {
@@ -262,7 +312,13 @@ export const StoreProvider = ({ children }) => {
 
     const fetchLiveSettings = async () => {
       try {
-        const res = await fetch('/api/settings');
+        const res = await fetch(`/api/settings?t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        });
         if (res.ok) {
           const data = await res.json();
           if (isMounted && data && data.storeName) {
@@ -290,7 +346,7 @@ export const StoreProvider = ({ children }) => {
     window.addEventListener('focus', handleFocus);
 
     // Periodically poll backend so changes propagate automatically across devices
-    const interval = setInterval(syncAllFromBackend, 5000);
+    const interval = setInterval(syncAllFromBackend, 4000);
 
     return () => {
       isMounted = false;
@@ -338,7 +394,7 @@ export const StoreProvider = ({ children }) => {
       return updated;
     });
     try {
-      await fetch('/api/orders', {
+      await fetch(`/api/orders?t=${Date.now()}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newOrder)
@@ -355,7 +411,7 @@ export const StoreProvider = ({ children }) => {
       return updated;
     });
     try {
-      await fetch(`/api/orders/${orderId}`, {
+      await fetch(`/api/orders/${orderId}?t=${Date.now()}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus })
@@ -372,7 +428,7 @@ export const StoreProvider = ({ children }) => {
       return updated;
     });
     try {
-      await fetch(`/api/orders/${orderId}`, {
+      await fetch(`/api/orders/${orderId}?t=${Date.now()}`, {
         method: 'DELETE'
       });
     } catch (err) {
@@ -381,16 +437,35 @@ export const StoreProvider = ({ children }) => {
   };
 
   // Product Actions (Saved locally and pushed to server disk database)
-  const updateProduct = (productId, updatedFields) => {
-    setProducts(prev => {
-      const updated = prev.map(p => p.id === productId ? { ...p, ...updatedFields } : p);
-      syncProductsToServer(updated);
-      try { localStorage.setItem(PRODUCTS_KEY, JSON.stringify(updated)); } catch (e) {}
-      return updated;
-    });
+  const updateProduct = async (productId, updatedFields) => {
+    lastAdminMutationRef.current = Date.now();
+    const current = (productsRef.current && productsRef.current.length > 0) ? productsRef.current : products;
+    const nextList = current.map(p => p.id === productId ? { ...p, ...updatedFields } : p);
+    productsRef.current = nextList;
+    setProducts(nextList);
+    try { localStorage.setItem(PRODUCTS_KEY, JSON.stringify(nextList)); } catch (e) {}
+
+    // 1. Sync full updated list to backend disk database
+    await syncProductsToServer(nextList);
+
+    // 2. Also send specific PATCH endpoint
+    try {
+      await fetch(`/api/products/${encodeURIComponent(productId)}?t=${Date.now()}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        },
+        body: JSON.stringify(updatedFields)
+      });
+    } catch (e) {}
+
+    return nextList;
   };
 
-  const addProduct = (newProduct) => {
+  const addProduct = async (newProduct) => {
+    lastAdminMutationRef.current = Date.now();
     const id = newProduct.id || `custom-${Date.now()}`;
     const item = {
       ...newProduct,
@@ -400,66 +475,115 @@ export const StoreProvider = ({ children }) => {
       reviewsCount: 1,
       weightOptions: newProduct.weightOptions || [{ label: newProduct.baseUnit || '1 kg', multiplier: 1, isDefault: true }]
     };
-    setProducts(prev => {
-      const updated = [item, ...prev];
-      syncProductsToServer(updated);
-      try { localStorage.setItem(PRODUCTS_KEY, JSON.stringify(updated)); } catch (e) {}
-      return updated;
-    });
+    const current = (productsRef.current && productsRef.current.length > 0) ? productsRef.current : products;
+    const nextList = [item, ...current];
+    productsRef.current = nextList;
+    setProducts(nextList);
+    try { localStorage.setItem(PRODUCTS_KEY, JSON.stringify(nextList)); } catch (e) {}
+
+    // 1. Sync full updated list to backend disk database
+    await syncProductsToServer(nextList);
+
+    return nextList;
   };
 
-  const toggleProductStock = (productId) => {
-    setProducts(prev => {
-      const updated = prev.map(p => p.id === productId ? { ...p, inStock: !p.inStock } : p);
-      syncProductsToServer(updated);
-      try { localStorage.setItem(PRODUCTS_KEY, JSON.stringify(updated)); } catch (e) {}
-      return updated;
+  const toggleProductStock = async (productId) => {
+    lastAdminMutationRef.current = Date.now();
+    const current = (productsRef.current && productsRef.current.length > 0) ? productsRef.current : products;
+    let newInStock = true;
+    const nextList = current.map(p => {
+      if (p.id === productId) {
+        newInStock = !p.inStock;
+        return { ...p, inStock: newInStock };
+      }
+      return p;
     });
+    productsRef.current = nextList;
+    setProducts(nextList);
+    try { localStorage.setItem(PRODUCTS_KEY, JSON.stringify(nextList)); } catch (e) {}
+
+    // 1. Sync full updated list to backend disk database
+    await syncProductsToServer(nextList);
+
+    // 2. Also send specific PATCH endpoint
+    try {
+      await fetch(`/api/products/${encodeURIComponent(productId)}?t=${Date.now()}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        },
+        body: JSON.stringify({ inStock: newInStock })
+      });
+    } catch (e) {}
+
+    return nextList;
   };
 
-  const deleteProduct = (productId) => {
-    setProducts(prev => {
-      const updated = prev.filter(p => p.id !== productId);
-      syncProductsToServer(updated);
-      try { localStorage.setItem(PRODUCTS_KEY, JSON.stringify(updated)); } catch (e) {}
-      return updated;
-    });
+  const deleteProduct = async (productId) => {
+    lastAdminMutationRef.current = Date.now();
+    const current = (productsRef.current && productsRef.current.length > 0) ? productsRef.current : products;
+    const nextList = current.filter(p => p.id !== productId);
+    productsRef.current = nextList;
+    setProducts(nextList);
+    try { localStorage.setItem(PRODUCTS_KEY, JSON.stringify(nextList)); } catch (e) {}
+
+    // 1. Sync full updated list to backend disk database
+    await syncProductsToServer(nextList);
+
+    // 2. Also send specific DELETE endpoint
+    try {
+      await fetch(`/api/products/${encodeURIComponent(productId)}?t=${Date.now()}`, {
+        method: 'DELETE',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
+    } catch (e) {}
+
+    return nextList;
   };
 
-  const resetProductsToDefault = () => {
-    setProducts(INITIAL_PRODUCTS);
-    syncProductsToServer(INITIAL_PRODUCTS);
-    try { localStorage.setItem(PRODUCTS_KEY, JSON.stringify(INITIAL_PRODUCTS)); } catch (e) {}
+  const clearAllProducts = async () => {
+    lastAdminMutationRef.current = Date.now();
+    productsRef.current = [];
+    setProducts([]);
+    try { localStorage.setItem(PRODUCTS_KEY, JSON.stringify([])); } catch (e) {}
+    await syncProductsToServer([]);
+    return [];
   };
+
+  const resetProductsToDefault = clearAllProducts;
 
   // Mandi Rate Actions (Saved locally and pushed to server disk database)
-  const updateMandiRate = (index, updatedRate) => {
-    setMandiRates(prev => {
-      const updatedRates = [...prev.rates];
-      updatedRates[index] = { ...updatedRates[index], ...updatedRate };
-      const updatedState = { ...prev, rates: updatedRates };
-      syncMandiRatesToServer(updatedState);
-      try { localStorage.setItem(MANDI_RATES_KEY, JSON.stringify(updatedState)); } catch (e) {}
-      return updatedState;
-    });
+  const updateMandiRate = async (index, updatedRate) => {
+    const updatedRates = [...mandiRates.rates];
+    updatedRates[index] = { ...updatedRates[index], ...updatedRate };
+    const updatedState = { ...mandiRates, rates: updatedRates };
+    setMandiRates(updatedState);
+    try { localStorage.setItem(MANDI_RATES_KEY, JSON.stringify(updatedState)); } catch (e) {}
+    await syncMandiRatesToServer(updatedState);
+    return updatedState;
   };
 
-  const addMandiRate = (newRate) => {
-    setMandiRates(prev => {
-      const updatedState = {
-        ...prev,
-        rates: [newRate, ...prev.rates]
-      };
-      syncMandiRatesToServer(updatedState);
-      try { localStorage.setItem(MANDI_RATES_KEY, JSON.stringify(updatedState)); } catch (e) {}
-      return updatedState;
-    });
+  const addMandiRate = async (newRate) => {
+    const updatedState = {
+      ...mandiRates,
+      rates: [newRate, ...mandiRates.rates]
+    };
+    setMandiRates(updatedState);
+    try { localStorage.setItem(MANDI_RATES_KEY, JSON.stringify(updatedState)); } catch (e) {}
+    await syncMandiRatesToServer(updatedState);
+    return updatedState;
   };
 
-  const resetMandiRatesToDefault = () => {
+  const resetMandiRatesToDefault = async () => {
     setMandiRates(INITIAL_MANDI_RATES);
-    syncMandiRatesToServer(INITIAL_MANDI_RATES);
     try { localStorage.setItem(MANDI_RATES_KEY, JSON.stringify(INITIAL_MANDI_RATES)); } catch (e) {}
+    await syncMandiRatesToServer(INITIAL_MANDI_RATES);
+    return INITIAL_MANDI_RATES;
   };
 
   // Settings Actions (Saved locally and pushed to server disk database)
@@ -519,6 +643,7 @@ export const StoreProvider = ({ children }) => {
         addProduct,
         toggleProductStock,
         deleteProduct,
+        clearAllProducts,
         resetProductsToDefault,
         mandiRates,
         updateMandiRate,
@@ -550,6 +675,7 @@ export const useStore = () => {
       addProduct: () => {},
       updateProduct: () => {},
       deleteProduct: () => {},
+      clearAllProducts: () => {},
       resetProductsToDefault: () => {},
       updateMandiRate: () => {},
       addMandiRate: () => {},

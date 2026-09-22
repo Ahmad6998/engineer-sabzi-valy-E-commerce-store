@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { CATEGORIES } from '../data/products';
+import { useStore } from '../context/StoreContext';
 import { Sparkles, Carrot, Salad, Apple, Flame, Package, Nut, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const ICON_MAP = {
@@ -13,6 +14,7 @@ const ICON_MAP = {
 };
 
 export default function CategoryPills({ selectedCategory, onSelectCategory }) {
+  const { products } = useStore();
   const scrollContainerRef = useRef(null);
 
   const handleScroll = (direction) => {
@@ -112,16 +114,21 @@ export default function CategoryPills({ selectedCategory, onSelectCategory }) {
                   {cat.urdu}
                 </span>
 
-                {/* Optional Produce Count */}
-                {cat.count && (
-                  <span
-                    className={`text-[10px] font-mono font-bold transition-opacity ${
-                      isSelected ? 'text-brand-100 opacity-90' : 'text-gray-400 group-hover:text-gray-600'
-                    }`}
-                  >
-                    ({cat.count})
-                  </span>
-                )}
+                {/* Dynamic Produce Count */}
+                {(() => {
+                  const count = cat.id === 'all'
+                    ? products.length
+                    : products.filter(p => p.category === cat.id).length;
+                  return count > 0 ? (
+                    <span
+                      className={`text-[10px] font-mono font-bold transition-opacity ${
+                        isSelected ? 'text-brand-100 opacity-90' : 'text-gray-400 group-hover:text-gray-600'
+                      }`}
+                    >
+                      ({count})
+                    </span>
+                  ) : null;
+                })()}
               </button>
             );
           })}

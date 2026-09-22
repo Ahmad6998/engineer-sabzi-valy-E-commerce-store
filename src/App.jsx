@@ -66,7 +66,7 @@ const findProductForMandiItem = (mandiItemName, allProducts) => {
   const byFirstWord = allProducts.find(p => p.name.toLowerCase().includes(firstWord));
   if (byFirstWord) return byFirstWord;
 
-  return allProducts[0];
+  return (allProducts && allProducts.length > 0) ? allProducts[0] : null;
 };
 
 function StoreApp() {
