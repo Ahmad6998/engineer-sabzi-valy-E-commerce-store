@@ -1,6 +1,7 @@
 import React from 'react';
-import { LayoutDashboard, ShoppingCart, Carrot, TrendingUp, Settings, ExternalLink, ArrowLeft, ShieldCheck, Bell, LogOut } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Carrot, TrendingUp, Settings, ExternalLink, ArrowLeft, ShieldCheck, Bell, LogOut, Phone } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
+import { STORE_SETTINGS } from '../../data/areas';
 
 export default function AdminLayout({ activeTab, setActiveTab, onExitAdmin, onLogout }) {
   const { orders } = useStore();
@@ -41,6 +42,15 @@ export default function AdminLayout({ activeTab, setActiveTab, onExitAdmin, onLo
 
           {/* Mobile Exit & Logout */}
           <div className="md:hidden flex items-center gap-1.5">
+            <a
+              href={`https://wa.me/${STORE_SETTINGS.whatsappCleanNumber}?text=Assalam-o-Alaikum`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 px-2 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded-lg text-xs font-bold transition-all"
+              title="Helpline"
+            >
+              <Phone className="w-3.5 h-3.5 text-emerald-400" />
+            </a>
             <button
               onClick={onExitAdmin}
               className="flex items-center gap-1 px-2.5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
@@ -87,16 +97,27 @@ export default function AdminLayout({ activeTab, setActiveTab, onExitAdmin, onLo
           })}
         </nav>
 
-        {/* Right: Return to Storefront & Logout */}
+        {/* Right: Return to Storefront, Helpline & Logout */}
         <div className="hidden md:flex items-center gap-2.5">
           <button
             onClick={onExitAdmin}
-            className="flex items-center gap-2 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-brand-300 border border-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+            className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-brand-300 border border-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Switch to Customer Store</span>
+            <span>Store</span>
             <ExternalLink className="w-3.5 h-3.5" />
           </button>
+
+          <a
+            href={`https://wa.me/${STORE_SETTINGS.whatsappCleanNumber}?text=Assalam-o-Alaikum%20Admin%20Support`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-3 py-2 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold transition-all cursor-pointer"
+            title="Helpline / WhatsApp"
+          >
+            <Phone className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Helpline: {STORE_SETTINGS.whatsappNumber}</span>
+          </a>
 
           <button
             onClick={onLogout}

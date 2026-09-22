@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingBag, Search, X, BarChart3, MessageCircle, Sparkles, ChevronDown, CheckCircle2, MapPin } from 'lucide-react';
+import { ShoppingBag, Search, X, BarChart3, MessageCircle, Sparkles, ChevronDown, CheckCircle2, MapPin, Phone } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { STORE_SETTINGS, DELIVERY_AREAS } from '../data/areas';
 
@@ -49,7 +49,7 @@ export default function Navbar({
             <button
               type="button"
               onClick={() => setIsLocationModalOpen(true)}
-              className="hidden lg:flex items-center gap-2 px-2.5 py-1.5 rounded-xl border border-gray-200 bg-gray-50/80 hover:bg-brand-50 hover:border-brand-300 text-gray-700 transition-all cursor-pointer active:scale-95 text-left shrink-0 ml-1"
+              className="hidden md:flex items-center gap-2 px-2.5 py-1.5 rounded-xl border border-gray-200 bg-gray-50/80 hover:bg-brand-50 hover:border-brand-300 text-gray-700 transition-all cursor-pointer active:scale-95 text-left shrink-0 ml-1"
               title="Change Delivery Location"
             >
               <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
@@ -94,40 +94,44 @@ export default function Navbar({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
             
             {/* Daily Mandi Rate Button */}
             <button
               onClick={onOpenMandiModal}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-brand-800 bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
+              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 text-xs font-semibold text-brand-800 bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
               title="View today's live Sabzi Mandi wholesale rates"
             >
-              <BarChart3 className="w-4 h-4 text-brand-600" />
+              <BarChart3 className="w-4 h-4 text-brand-600 shrink-0" />
               <span className="hidden sm:inline">Mandi Rates</span>
               <span className="bg-brand-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
                 Live
               </span>
             </button>
 
-            {/* Direct WhatsApp Quick Order */}
-            <a
-              href={`https://wa.me/${STORE_SETTINGS.whatsappCleanNumber}?text=Assalam-o-Alaikum%20Engineer%20Sabzi%20Valy%2C%20I%20want%20to%20order%20vegetables.`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden lg:flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-all active:scale-95"
-            >
-              <MessageCircle className="w-4 h-4 text-emerald-600" />
-              <span>WhatsApp Order</span>
-            </a>
-
             {/* Admin Side Switcher */}
             <button
               onClick={onOpenAdmin}
-              className="hidden xl:flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl transition-all active:scale-95 cursor-pointer"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl transition-all active:scale-95 cursor-pointer shrink-0"
               title="Open Store Admin Dashboard"
             >
-              <span>🔐 Admin Panel</span>
+              <span>🔐</span>
+              <span className="hidden md:inline">Admin Portal</span>
             </button>
+
+            {/* Helpline Button right side of Admin Portal */}
+            <a
+              href={`https://wa.me/${STORE_SETTINGS.whatsappCleanNumber}?text=Assalam-o-Alaikum%20Engineer%20Sabzi%20Valy%2C%20I%20have%20an%20inquiry.`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-xl transition-all active:scale-95 cursor-pointer shrink-0 shadow-xs"
+              title={`Call or WhatsApp Helpline: ${STORE_SETTINGS.whatsappNumber}`}
+            >
+              <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span className="hidden xl:inline">Helpline:</span>
+              <span className="hidden sm:inline font-bold text-emerald-900">{STORE_SETTINGS.whatsappNumber}</span>
+              <span className="sm:hidden font-bold">Helpline</span>
+            </a>
 
             {/* Shopping Cart Drawer Trigger */}
             <button

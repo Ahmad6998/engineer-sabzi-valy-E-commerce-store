@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CartProvider, useCart } from './context/CartContext';
 import { StoreProvider, useStore } from './context/StoreContext';
-import TopAnnouncement from './components/TopAnnouncement';
+// import TopAnnouncement from './components/TopAnnouncement';
 import Navbar from './components/Navbar';
 import { MandiRateTicker, MandiRatesModal } from './components/MandiRateTicker';
 import HeroBanner from './components/HeroBanner';
@@ -153,13 +153,7 @@ function StoreApp() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans pb-16 sm:pb-0">
       
-      {/* 1. Top Announcement Bar with Admin shortcut */}
-      <TopAnnouncement
-        onOpenMandiModal={() => setIsMandiModalOpen(true)}
-        onOpenAdmin={() => setViewMode('admin')}
-      />
-
-      {/* 2. Main Navigation Bar with Admin shortcut */}
+      {/* 1. Main Navigation Bar with Admin shortcut and Helpline */}
       <Navbar
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
